@@ -1,5 +1,50 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+
+# Virtual Environment
+venv/
+.venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment / Secrets
 .env
 keys.txt
-venv/
+*.key
+
+# Data artifacts (large files — rebuild on target machine)
+data/index/*.faiss
+data/index/*.pkl
+data/index/*.json
 models/
-__pycache__/
+*.ckpt
+*.safetensors
+*.bin
+
+# Logs
+logs/*
+!logs/.gitkeep
+
+# Results (generated, not tracked)
+results/*
+!results/.gitkeep
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Misc
+*.bak
+*.tmp
+scratch/

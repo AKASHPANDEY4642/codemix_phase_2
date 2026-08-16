@@ -1,0 +1,185 @@
+# =============================================================================
+# MedManglish-RAG: Centralized Configuration
+# =============================================================================
+# All model names, paths, thresholds, and API settings in one place.
+# Override any value via environment variables prefixed with MEDMANGLISH_.
+
+# ---------------------------------------------------------------------------
+# Paths
+# ---------------------------------------------------------------------------
+paths:
+  project_root: "."
+  raw_data: "data/raw"
+  processed_data: "data/processed"
+  splits_dir: "data/splits"
+  index_dir: "data/index"
+  knowledge_base_dir: "data/knowledge_base"
+  logs_dir: "logs"
+  sqlite_db: "logs/medmanglish.db"
+  models_cache: "models"
+
+# ---------------------------------------------------------------------------
+# Phase 1: Data Generation & Ingestion
+# ---------------------------------------------------------------------------
+data_generation:
+  # Controllable Code-Mixing Index (0.0 = pure English, 1.0 = pure Marathi)
+  default_target_cmi: 0.5
+  light_cmi: 0.3
+  heavy_cmi: 0.7
+  generation_model: "llama-3.1-8b-instant"
+  generation_temperature: 0.7
+  max_generation_tokens: 1024
+  request_delay_seconds: 2.5
+  max_consecutive_errors: 15
+  save_every_n: 10
+  target_samples: 5000
+
+ingestion:
+  # Medical-aware semantic chunking parameters
+  chunk_size_tokens: 400         # Target: 300-500
+  chunk_overlap_tokens: 65       # Target: 50-80
+  min_chunk_size_tokens: 100
+  # Metadata schema version
+  metadata_version: "1.0"
+
+# ---------------------------------------------------------------------------
+# Phase 2: Tokenizer Pipeline
+# ---------------------------------------------------------------------------
+tokenizer:
+  # Models to profile for Token Tax
+  profile_models:
+    - "google/gemma-2-2b"
+    - "google/muril-base-cased"
+    - "xlm-roberta-base"
+    - "bert-base-multilingual-cased"
+  # The base tokenizer to expand vocabulary upon
+  base_tokenizer: "google/gemma-2-2b"
+  # Cross-script cosine similarity threshold
+  cross_script_threshold: 0.85
+
+# ---------------------------------------------------------------------------
+# Phase 3: Query Processing (Core Novelty)
+# ---------------------------------------------------------------------------
+query_processor:
+  # Unicode normalization form
+  normalization_form: "NFC"
+  # Transliteration backend: "indic_trans" or "google_api"
+  transliteration_backend: "indic_trans"
+  # Semantic translation backend: "indictrans2" or "groq_api"
+  translation_backend: "groq_api"
+  translation_model: "llama-3.1-8b-instant"
+
+# ---------------------------------------------------------------------------
+# Phase 4: Hybrid Retrieval
+# ---------------------------------------------------------------------------
+retrieval:
+  # HyDE
+  hyde_model: "llama-3.1-8b-instant"
+  hyde_max_tokens: 200
+  hyde_temperature: 0.3
+
+  # Dense Embedding (local)
+  local_embedding_model: "BAAI/bge-m3"
+  # Dense Embedding (API offload for secondary)
+  api_embedding_model: "text-embedding-3-small"
+  api_embedding_provider: "openai"    # "openai" or "none"
+
+  # BM25 Sparse Search
+  bm25_top_k: 30
+
+  # Dense Search
+  dense_top_k: 30
+
+  # Reciprocal Rank Fusion
+  rrf_k: 60
+  rrf_top_k: 30
+
+  # Cross-Encoder Reranker
+  reranker_model: "BAAI/bge-reranker-v2-m3"
+  reranker_top_k: 5
+
+# ---------------------------------------------------------------------------
+# Phase 5: VRAM Orchestration & Generation
+# ---------------------------------------------------------------------------
+orchestration:
+  # VRAM budget in GB
+  vram_budget_gb: 16
+  # LLM Generation
+  local_llm_model: "Qwen/Qwen2.5-7B-Instruct"
+  # External API fallback for generation
+  external_llm_provider: "groq"      # "groq", "openai", or "local"
+  external_llm_model: "llama-3.1-8b-instant"
+  generation_temperature: 0.3
+  generation_max_tokens: 768
+
+  # Prompt engineering
+  force_thought_block: true
+  enforce_citation: true
+  dosage_safety_rule: "Do not give medical dosages unless explicitly stated in the retrieved context."
+
+# ---------------------------------------------------------------------------
+# Phase 6: Safety & Risk
+# ---------------------------------------------------------------------------
+safety:
+  # Zero-shot classifier
+  classifier_model: "facebook/bart-large-mnli"
+  risk_labels:
+    - "low risk general health question"
+    - "medium risk medical symptom question"
+    - "high risk emergency medical question"
+  # Entropy threshold for uncertainty flagging
+  entropy_threshold: 2.5
+  # Marathi disclaimer for HIGH risk
+  high_risk_disclaimer: "🚨 हा वैद्यकीय सल्ला नाही. कृपया त्वरित डॉक्टरांशी संपर्क साधा."
+
+# ---------------------------------------------------------------------------
+# Phase 7: Fine-Tuning (QLoRA)
+# ---------------------------------------------------------------------------
+finetuning:
+  base_model: "Qwen/Qwen2.5-7B-Instruct"
+  lora_r: 16
+  lora_alpha: 32
+  lora_dropout: 0.05
+  target_modules:
+    - "q_proj"
+    - "v_proj"
+  learning_rate: 2.0e-4
+  num_epochs: 3
+  batch_size: 4
+  gradient_accumulation_steps: 4
+  max_seq_length: 2048
+  output_dir: "models/qlora_adapters"
+
+# ---------------------------------------------------------------------------
+# Phase 8: Evaluation
+# ---------------------------------------------------------------------------
+evaluation:
+  # Retrieval metrics
+  recall_at_k: [5, 10]
+  # SelfCheckGPT
+  selfcheck_num_samples: 3
+  # RAGAS
+  ragas_sample_size: 50
+  # Output paths
+  retrieval_baselines_csv: "results/retrieval_baselines.csv"
+  architecture_comparison_csv: "results/architecture_comparison.csv"
+  generation_metrics_csv: "results/generation_metrics.csv"
+  ablation_csv: "results/ablation_study.csv"
+  human_eval_template: "results/human_eval_rubric.csv"
+
+# ---------------------------------------------------------------------------
+# API Configuration
+# ---------------------------------------------------------------------------
+api:
+  host: "0.0.0.0"
+  port: 8000
+  cors_origins:
+    - "*"
+
+# ---------------------------------------------------------------------------
+# Logging
+# ---------------------------------------------------------------------------
+logging:
+  level: "INFO"
+  format: "%(asctime)s | %(name)s | %(levelname)s | %(message)s"
+  file: "logs/medmanglish.log"
