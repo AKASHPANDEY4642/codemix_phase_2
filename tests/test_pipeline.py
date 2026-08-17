@@ -241,7 +241,7 @@ class TestSemanticChunking:
         """Text should be split into chunks."""
         from src.ingest import semantic_chunk
         text = "First sentence. " * 50 + "Last sentence."
-        chunks = semantic_chunk(text, chunk_size=100, chunk_overlap=20)
+        chunks = semantic_chunk(text, chunk_size=100, chunk_overlap=20, min_chunk_size=20)
         assert len(chunks) > 1
 
     def test_empty_text(self) -> None:
